@@ -46,7 +46,7 @@ public class ImmunizationHandler {
    * @param vaccinationReported the vaccinationReported
    * @param i the Immunization resource
    */
-  public static void vaccinationReportedFromFhirImmunization(
+  public static VaccinationReported vaccinationReportedFromFhirImmunization(
       VaccinationReported vaccinationReported, Immunization i) {
     //vaccinationReported.setVaccinationReportedId(0);
     vaccinationReported.setVaccinationReportedExternalLink(i.getId());
@@ -57,6 +57,13 @@ public class ImmunizationHandler {
     }
     vaccinationReported.setUpdatedDate(new Date());
     vaccinationReported.setLotnumber(i.getLotNumber());
+    //System.err.println("le lot number est" + i.getLotNumber());
+    if(i.getOccurrenceDateTimeType().getValue()==null){
+      vaccinationReported.setAdministeredDate(i.getOccurrenceStringType().dateTimeValue().getValue());
+    }
+    else{
+      vaccinationReported.setAdministeredDate(i.getOccurrenceDateTimeType().getValue());
+    }
     vaccinationReported.setAdministeredDate(i.getOccurrenceDateTimeType().getValue());
     vaccinationReported.setAdministeredAmount(i.getDoseQuantity().getValue().toString());
     vaccinationReported.setExpirationDate(i.getExpirationDate());
@@ -70,6 +77,13 @@ public class ImmunizationHandler {
     //vaccinationReported.setActionCode();
     vaccinationReported.setRefusalReasonCode(i.getReasonCodeFirstRep().getText());
     vaccinationReported.setVaccineCvxCode(i.getVaccineCode().getCodingFirstRep().getCode());
+    if(i.getPrimarySource()){
+      vaccinationReported.setInformationSource("01");
+
+    }else{
+      vaccinationReported.setInformationSource("00");
+    }
+    return vaccinationReported;
   }
 
   /**
@@ -190,15 +204,19 @@ public class ImmunizationHandler {
       for (VaccinationReported vaccinationReported : vaccinationReportedList){
         i2 = new org.immregistries.vaccination_deduplication.Immunization();
         i2.setCVX(vaccinationReported.getVaccineCvxCode());
-        i2.setDate(vaccinationReported.getAdministeredDate());
+        //i2.setDate(vaccinationReported.getAdministeredDate());
         i2.setLotNumber(vaccinationReported.getLotnumber());
-        if (immunization.getPrimarySource()){
+        if (vaccinationReported.getInformationSource().equals("01")){
           i2.setSource(ImmunizationSource.SOURCE);
         }else {
           i2.setSource(ImmunizationSource.HISTORICAL);
         }
+        System.err.println(i2.getSource().toString());
         comparison = comparer.compare(i1,i2);
+
+        System.err.println("comparaison :"+ immunization.getIdentifier().get(0).getValue()  + " "+vaccinationReported.getVaccinationReportedExternalLink() +" "+ comparison.toString());
         if (comparison.equals(ComparisonResult.EQUAL)) {
+          System.err.println("vaccination reported id "+vaccinationReported.getVaccinationReportedExternalLink());
           return vaccinationReported.getVaccination();
         }
       }
